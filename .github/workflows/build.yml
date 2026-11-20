@@ -1,0 +1,39 @@
+
+name: Build CCAster
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          brew install ldid dpkg
+
+      - name: Install Theos
+        run: |
+          git clone --recursive https://github.com/theos/theos.git "$HOME/theos"
+          echo "THEOS=$HOME/theos" >> "$GITHUB_ENV"
+
+      - name: Build rootless package
+        run: |
+          export THEOS="$HOME/theos"
+          export CLANG_MODULE_CACHE_PATH=/tmp/clang-module-cache
+          export SWIFT_MODULE_CACHE_PATH=/tmp/swift-module-cache
+          make clean package FINALPACKAGE=1
+
+      - name: Upload Debian package
+        uses: actions/upload-artifact@v4
+        with:
+          name: CCAster-deb
+          path: packages/*.deb
+          if-no-files-found: error
